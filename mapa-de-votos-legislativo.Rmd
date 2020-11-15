@@ -8,7 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 # Carregar pacotes
-library(congressbr) # o pacote congressbr é um cliente API desenhado para baixar os
+# library(congressbr) # o pacote congressbr é um cliente API desenhado para baixar os
 # dados diretamente do site da camara dos deputados 
 library(tidyverse) # pacote para manipulação, transformação e vizualição dos dados
 library(rgdal) # pacote para carregar objetos espaciais
@@ -16,7 +16,8 @@ library(sp) # pacote para manipular e visualizar objetos espaciais
 library(tmap) # pacote para geração de mapas
 
 # Carregar dados
-cham_2015 <- cham_votes_year('2015')
+# cham_2015 <- cham_votes_year('2015') # comando omitido para trabalhar com os dados gravados
+cham_2015 <- read.csv("cham_2015.csv")
 regiao <- readOGR(dsn = "regioes_2010", layer = "regioes_2010")
 estados <- readOGR(dsn = "estados_2010", layer = "estados_2010")
 
@@ -68,7 +69,7 @@ nao <- total
 ## Medida Provisória 660-2014-1 (MPV-660-2014-1)
 
 ```{r, eval = TRUE, echo = FALSE}
-tmap("view")
+tmap_mode("view")
 tm_basemap(server = "CartoDB.PositronNoLabels") +
             # nao
             tm_shape(shp = nao, name = "Votos contra") +
