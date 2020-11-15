@@ -1,0 +1,170 @@
+---
+title: "Mapa de votos do legislativo"
+author: "Vitor Borges-Júnior"
+date: "15/11/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Comandos que geraram o mapa
+
+A sequência de comandos abaixo carrega os pacotes necessários para gerar a tabela de dados necessária e construção do mapa e de suas camadas. O comando do pacote _congressbr_ foi utilizado para obter os resultados das votações via API. Nesta demostração o seu uso foi omitido e, alternativamente para este exemplo, está sendo utilizado o dado carregado do arquivo gravado em disco. A vizualização ideal do mapa deve ser realizada com uma camada de votação mais a camada "região" (ex. selecionar as camadas Saldo da votação + região, ou votos a favor + região, ou votos contra + região).
+
+
+```{r, eval = TRUE, echo = TRUE}
+# Carregar pacotes
+# library(congressbr) # o pacote congressbr é um cliente API desenhado para baixar os
+# dados diretamente do site da camara dos deputados 
+library(tidyverse) # pacote para manipulação, transformação e vizualição dos dados
+library(rgdal) # pacote para carregar objetos espaciais
+library(sp) # pacote para manipular e visualizar objetos espaciais
+library(tmap) # pacote para geração de mapas
+
+# Carregar dados
+# cham_2015 <- cham_votes_year('2015') # comando omitido para trabalhar com os dados gravados
+cham_2015 <- read.csv("cham_2015.csv")
+regiao <- readOGR(dsn = "regioes_2010", layer = "regioes_2010")
+estados <- readOGR(dsn = "estados_2010", layer = "estados_2010")
+
+# gerar conjunto de dados com as variaveis de interesse para cada ano
+# 2015
+cham_15 <- data.frame(rollcall_id = cham_2015$rollcall_id,
+                      decision_summary = cham_2015$decision_summary,
+                      decision_date = cham_2015$decision_date,
+                      rollcall_subject = cham_2015$rollcall_subject,
+                      session_id = cham_2015$session_id,
+                      legislator_id = cham_2015$legislator_id,
+                      legislator_name = cham_2015$legislator_name,
+                      legislator_state = cham_2015$legislator_state,
+                      legislator_party = cham_2015$legislator_party,
+                      legislator_vote = cham_2015$legislator_vote,
+                      number_bill = cham_2015$number_bill,
+                      year_bill = cham_2015$year_bill,
+                      ano = cham_2015$ano)
+
+# Resultado por matéria e por estado
+resultado_materia_estado1 <- cham_15 %>% 
+  group_by(rollcall_id, legislator_state) %>% 
+  mutate(total = ifelse(legislator_vote == "Sim", 1, 
+                       ifelse(legislator_vote == "Nao", -1, 
+                              ifelse(legislator_vote == "Art. 17", 0, 0))),
+         sim = ifelse(legislator_vote == "Sim", 1, 
+                       ifelse(legislator_vote == "Nao", 0, 
+                              ifelse(legislator_vote == "Art. 17", 0, 0))),
+         nao = ifelse(legislator_vote == "Sim", 0, 
+                       ifelse(legislator_vote == "Nao", -1, 
+                              ifelse(legislator_vote == "Art. 17", 0, 0)))) %>% 
+  group_by(rollcall_id, legislator_state) %>% 
+  filter(legislator_vote %in% c("Sim", "Nao")) %>% 
+  summarise(total = sum(total), sim = sum(sim), nao = sum(nao))
+
+materia1 <- resultado_materia_estado1[resultado_materia_estado1$rollcall_id == resultado_materia_estado1$rollcall_id[1], ]
+
+total <- merge(x = estados, y = materia1,
+                by.x = "sigla", by.y = "legislator_state", 
+                duplicateGeoms = TRUE) # to merge a spatial object to a data frame
+
+# gerando camadas sim e nao
+sim <- total
+nao <- total
+
+```
+
+## Mapa de votos do Legislativo - Medida Provisória 660-2014-1 (MPV-660-2014-1)
+### Saldo da Votação
+
+Essa camada do mapa mostra o resultado da votação da matéria em questão por estado (saldo = votos a favor - votos contra). Um saldo positivo significa que a medida foi aprovada no estado. Um saldo negativo indica que a medida foi reprovada neste estado. Cores mais intensas indicam que a medida foi aprovada, enquanto cores menos intenção indicam a reprovação da matéria no estado. Clicando (ou tocando, no smartphone) sobre a sigla do estado é fornecida uma tabela contendo o saldo para o estado, assim como o total de votos a favor e contra a medida.
+
+```{r, scho = TRUE, eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+# total
+tmap_mode("plot")
+tm_basemap(server = "CartoDB.PositronNoLabels") +
+            tm_shape(shp = total, name = "Saldo da votação") +
+            tm_fill(col = "total", 
+                    title = paste("Votação da\n", resultado_materia_estado1$rollcall_id[1])) +
+            tm_borders() +
+            tm_text(text = "sigla", size = 1) +
+            tm_symbols(alpha = 0, border.alpha = 0,
+                       popup.vars = c(Saldo = "total", 
+                                      `A Favor` = "sim",
+                                      Contra = "nao")) +
+            # Região
+            tm_shape(regiao) +
+            tm_borders(col = "black", lwd = 2) +
+            tm_view(leaflet.options = c(dragging = FALSE), 
+                    set.zoom.limits = c(4, 10))
+```
+
+### Votos a favor
+
+Essa camada do mapa mostra o número de votos a favor de uma medida em um estado. Cores mais intensas indicam mais votos a favor da medida, enquanto cores menos intensas indicam menos votos a favor da matéria no estado. Clicando (ou tocando, no smartphone) sobre a sigla do estado é fornecida uma tabela contendo o número de votos a favor da medida e o saldo da votação para o estado.
+
+```{r, scho = TRUE, eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+tmap_mode("plot")
+tm_basemap(server = "CartoDB.PositronNoLabels") +
+            # sim
+            tm_shape(shp = sim, name = "Votos a favor") +
+            tm_fill(col = "sim", midpoint = 0,
+                    title = paste("Votação \n", resultado_materia_estado1$rollcall_id[1])) +
+            tm_borders() +
+            tm_text(text = "sigla", size = 1) +
+            tm_symbols(alpha = 0, border.alpha = 0,
+                       popup.vars = c(`A Favor` = "sim",
+                                      Saldo = "total")) +
+            # Região
+            tm_shape(regiao) +
+            tm_borders(col = "black", lwd = 2) +
+            tm_view(leaflet.options = c(dragging = FALSE), 
+                    set.zoom.limits = c(4, 10))
+```
+
+### Votos Contra
+
+Essa camada do mapa mostra o número de votos contra uma medida em um estado. Cores mais intensas indicam mais votos contra a medida, enquanto cores menos intensas indicam menos contra a matéria no estado. Clicando (ou tocando, no smartphone) sobre a sigla do estado é fornecida uma tabela contendo o número de votos contra a medida e o saldo da votação para o estado.
+
+```{r, scho = TRUE, eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+tmap_mode("plot")
+tm_basemap(server = "CartoDB.PositronNoLabels") +
+            # nao
+            tm_shape(shp = nao, name = "Votos contra") +
+            tm_fill(col = "nao", midpoint = 0,
+                    title = paste("Votação \n", resultado_materia_estado1$rollcall_id[1])) +
+            tm_borders() +
+            tm_text(text = "sigla", size = 1) +
+            tm_symbols(alpha = 0, border.alpha = 0,
+                       popup.vars = c(Contra = "nao",
+                                      Saldo = "total")) +
+            # Região
+            tm_shape(regiao) +
+            tm_borders(col = "black", lwd = 2) +
+            tm_view(leaflet.options = c(dragging = FALSE), 
+                    set.zoom.limits = c(4, 10))
+```
+
+## Como o mapa pode ser útil?
+
+A partir dos saldos das votações, assim como dos votos a favor ou contra uma matéria, estratégias pode ser traçadas para alianças com deparlamentares de estados que tendem a um posicionamento mais alinhado ao do partido. Por exemplo, estados onde matérias de interesse do partido perdem por uma diferença muito pequena de votos podem ser propícios a tenttivas de negociações com os parlamentares dessse estado para obter tendência favorável em uma determinada matéria.
+
+## Aperfeiçoamento do mapa
+
+Este mapa pode ser aperfeiçoado para incluir:
+
+- informação gráfica para informar o resultado geral da votação (ex. aprovação ou não da matéria);
+- descrição da matéria votada;
+- outras matérias já votadas;
+- categorização das matérias por tema (ex. orçamento, trabalho, saúde, educação);
+- posicionamento dos parlamentares por tema;
+- posicionamento dos parlamentares vinculados às filiações partidárias;
+- automatização da geração dos dados e mapas;
+
+
+Recursos de interatividade também podem ser adicionados, como:
+
+- seleção de matérias votadas;
+- seleção de matérias votadas por categoria;
+- seleção de período (ex. ano, mês) para escolha da matéria votada
+
+A adição desses recursos agregam dados valiosos para delineamento de estratégias de negociação por parte dos parlamentares, além de poderem ser transformadas em um aplicativo para serem acessadas com facilidade por estes.
