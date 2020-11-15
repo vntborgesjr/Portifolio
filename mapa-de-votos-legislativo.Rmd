@@ -1,0 +1,107 @@
+---
+title: "Mapa-de-votos"
+author: "Vitor Borges-Júnior"
+date: "15/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Carregar pacotes
+library(congressbr) # o pacote congressbr é um cliente API desenhado para baixar os
+# dados diretamente do site da camara dos deputados 
+library(tidyverse) # pacote para manipulação, transformação e vizualição dos dados
+library(rgdal) # pacote para carregar objetos espaciais
+library(sp) # pacote para manipular e visualizar objetos espaciais
+library(tmap) # pacote para geração de mapas
+
+# Carregar dados
+cham_2015 <- cham_votes_year('2015')
+regiao <- readOGR(dsn = "regioes_2010", layer = "regioes_2010")
+estados <- readOGR(dsn = "estados_2010", layer = "estados_2010")
+
+# gerar conjunto de dados com as variaveis de interesse para cada ano
+# 2015
+cham_15 <- data.frame(rollcall_id = cham_2015$rollcall_id,
+                      decision_summary = cham_2015$decision_summary,
+                      decision_date = cham_2015$decision_date,
+                      rollcall_subject = cham_2015$rollcall_subject,
+                      session_id = cham_2015$session_id,
+                      legislator_id = cham_2015$legislator_id,
+                      legislator_name = cham_2015$legislator_name,
+                      legislator_state = cham_2015$legislator_state,
+                      legislator_party = cham_2015$legislator_party,
+                      legislator_vote = cham_2015$legislator_vote,
+                      number_bill = cham_2015$number_bill,
+                      year_bill = cham_2015$year_bill,
+                      ano = cham_2015$ano)
+
+# Resultado por matéria e por estado
+resultado_materia_estado1 <- cham_15 %>% 
+  group_by(rollcall_id, legislator_state) %>% 
+  mutate(total = ifelse(legislator_vote == "Sim", 1, 
+                       ifelse(legislator_vote == "Nao", -1, 
+                              ifelse(legislator_vote == "Art. 17", 0, 0))),
+         sim = ifelse(legislator_vote == "Sim", 1, 
+                       ifelse(legislator_vote == "Nao", 0, 
+                              ifelse(legislator_vote == "Art. 17", 0, 0))),
+         nao = ifelse(legislator_vote == "Sim", 0, 
+                       ifelse(legislator_vote == "Nao", -1, 
+                              ifelse(legislator_vote == "Art. 17", 0, 0)))) %>% 
+  group_by(rollcall_id, legislator_state) %>% 
+  filter(legislator_vote %in% c("Sim", "Nao")) %>% 
+  summarise(total = sum(total), sim = sum(sim), nao = sum(nao))
+
+materia1 <- resultado_materia_estado1[resultado_materia_estado1$rollcall_id == resultado_materia_estado1$rollcall_id[1], ]
+
+total <- merge(x = estados, y = materia1,
+                by.x = "sigla", by.y = "legislator_state", 
+                duplicateGeoms = TRUE) # to merge a spatial object to a data frame
+
+# gerando camadas sim e nao
+sim <- total
+nao <- total
+
+```
+
+# Mapa de votos do Legislativo
+## Medida Provisória 660-2014-1 (MPV-660-2014-1)
+
+```{r, eval = TRUE, echo = FALSE}
+tmap("view")
+tm_basemap(server = "CartoDB.PositronNoLabels") +
+            # nao
+            tm_shape(shp = nao, name = "Votos contra") +
+            tm_fill(col = "nao", midpoint = 0,
+                    title = paste("Votação \n", resultado_materia_estado1$rollcall_id[1])) +
+            tm_borders() +
+            tm_text(text = "sigla", size = 1) +
+            tm_symbols(alpha = 0, border.alpha = 0,
+                       popup.vars = c(Contra = "nao",
+                                      Saldo = "total")) +
+            # sim
+            tm_shape(shp = sim, name = "Votos a favor") +
+            tm_fill(col = "sim", midpoint = 0,
+                    title = paste("Votação \n", resultado_materia_estado1$rollcall_id[1])) +
+            tm_borders() +
+            tm_text(text = "sigla", size = 1) +
+            tm_symbols(alpha = 0, border.alpha = 0,
+                       popup.vars = c(`A Favor` = "sim",
+                                      Saldo = "total")) +
+            # total
+            tm_shape(shp = total, name = "Saldo da votação") +
+            tm_fill(col = "total", 
+                    title = paste("Votação da\n", resultado_materia_estado1$rollcall_id[1])) +
+            tm_borders() +
+            tm_text(text = "sigla", size = 1) +
+            tm_symbols(alpha = 0, border.alpha = 0,
+                       popup.vars = c(Saldo = "total", 
+                                      `A Favor` = "sim",
+                                      Contra = "nao")) +
+            # Região
+            tm_shape(regiao) +
+            tm_borders(col = "black", lwd = 2) +
+            tm_view(leaflet.options = c(dragging = FALSE), 
+                    set.zoom.limits = c(4, 10))
+```
+
