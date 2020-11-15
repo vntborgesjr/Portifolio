@@ -1,7 +1,4 @@
 ---
-title: "Mapa-de-votos"
-author: "Vitor Borges-Júnior"
-date: "15/11/2020"
 output: html_document
 ---
 
@@ -68,7 +65,7 @@ nao <- total
 # Mapa de votos do Legislativo
 ## Medida Provisória 660-2014-1 (MPV-660-2014-1)
 
-```{r, eval = TRUE, echo = FALSE}
+```{r, eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE}
 tmap_mode("view")
 tm_basemap(server = "CartoDB.PositronNoLabels") +
             # nao
