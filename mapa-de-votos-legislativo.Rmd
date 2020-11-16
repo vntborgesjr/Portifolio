@@ -1,5 +1,13 @@
 ---
-output: html_document
+output: 
+  html_document:
+    theme: darkly
+    highlight: breezedark
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    colapse: true
+    smooth_scroll: false
 ---
 
 ```{r setup, include=FALSE}
@@ -62,7 +70,7 @@ nao <- total
 
 ```
 
-# Mapa de votos do Legislativo
+# **Mapa de votos do Legislativo**{.tabset .tabset-fade .tabset-pills}
 ## Medida Provisória 660-2014-1 (MPV-660-2014-1)
 
 ```{r, eval = TRUE, echo = FALSE, warning = FALSE, message = FALSE}
@@ -103,3 +111,4 @@ tm_basemap(server = "CartoDB.PositronNoLabels") +
                     set.zoom.limits = c(4, 10))
 ```
 
+### [Índice](index.html){.tabset}
