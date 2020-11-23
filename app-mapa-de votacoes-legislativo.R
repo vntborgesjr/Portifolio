@@ -92,21 +92,26 @@ for (i in 1:index){
 
 # Construir a interface do usuário  -------------------------------------------
 iu <- fluidPage(
-  titlePanel("Mapa de votação da Câmara dos Deputados Federais")),
-  # seletor para o ano
-  sliderInput(inputId = 'ano', label = 'Escolha um ano: ', 
-              min = 2015, max = 2020, value = 2020),
-  # seletor de temas
-  
-  # seletor de matéria
-  selectInput('rollcall_id', 'Selecione a matéria', 
-              choices = c(levels(factor(legislativo$rollcall_id))),
-              selected = "primeira materia de 2020"),
-  # seletor de mapa
-
-  # seletor de votação
-  selectInput('nao', 'Selecione o resultado: ', 
-            choices = c('nao', 'sim', 'saldo'), selected = 'saldo'),
-  # Add plot output to display top 10 most popular names
-  plotOutput('plot_top_10_names')
-)
+  titlePanel("Mapa de votação da Câmara dos Deputados Federais"),
+  # Layout da barra lateral
+  sidebarLayout(
+    # posicionar seletores como painel lateral
+    sidebarPainel(
+      # seletor para o ano
+      sliderInput(inputId = 'ano', label = 'Escolha um ano: ', 
+                  min = 2015, max = 2020, value = 2020),
+      # seletor de temas
+      
+      # seletor de matéria
+      selectInput('rollcall_id', 'Selecione a matéria', 
+                  choices = c(levels(factor(legislativo$rollcall_id))),
+                  selected = "primeira materia de 2020"),
+      # seletor de mapa
+      
+      # seletor de votação
+      selectInput('nao', 'Selecione o resultado: ', 
+                  choices = c('nao', 'sim', 'saldo'), selected = 'saldo'),
+      # painel principal para o mapa
+      mainPanel(
+        # Add plot output to display top 10 most popular names
+        plotOutput('')))))
