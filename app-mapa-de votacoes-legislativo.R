@@ -6,15 +6,19 @@
 #
 # Carregar pacotes  -------------------------------------------
 library(tidyverse)
+library(rgdal)
 library(tmap)
 library(shiny)
 
 # Carregar dados  -------------------------------------------
-legislativo <- read_csv("datasets/cham_vote_15_20.csv")
+cham_18 <- read_csv("datasets/cham_18.csv")[, -1]
+cham_19 <- read_csv("datasets/cham_19.csv")[, -1]
+cham_20 <- read_csv("datasets/cham_20.csv")[, -1]
 regiao_shp <- readOGR(dsn = "regioes_2010", layer = "regioes_2010")
 estados_shp <- readOGR(dsn = "estados_2010", layer = "estados_2010")
 
-
+# Agrupar dados das votações  -------------------------------------------
+legislativo <- rbind(cham_18, cham_19, cham_20)
 
 # sumarizar dados ---------------------------------------------------------
 # estado
@@ -50,16 +54,17 @@ partido_votos <- legislativo %>%
   summarise(saldo = sum(saldo), sim = sum(sim), nao = sum(nao))
 
 # Gerar objetos espaciais para as diferentes camadas  -------------------------------------------
-camada_estado <- merge(x = estados, y = estado_votos,
+camada_estado <- merge(x = estados_shp, y = estado_votos,
                        by.x = "sigla", by.y = "legislator_state", 
                        duplicateGeoms = TRUE) # to merge a spatial object to a data frame
 
-camada_partido <- merge(x = estados, y = partido_votos,
+camada_partido <- merge(x = estados_shp, y = partido_votos,
                         by.x = "sigla", by.y = "legislator_state", 
                         duplicateGeoms = TRUE) # to merge a spatial object to a data frame
 
 # gerando camadas saldo, sim e não de mapa por estado
-camada_estado <- camada_estado[, c("rollcall_id", "sigla", "nao", "sim", "saldo")]
+camada_estado <- camada_estado[, c("rollcall_id", "sigla",
+                                   "nao", "sim", "saldo")]
 estado <- list()
 
 for (i in 3:5) {
@@ -68,7 +73,7 @@ for (i in 3:5) {
 }
 
 estado <- c(nao = estado[[3]], sim = estado[[4]], saldo = estado[[5]])
-
+head(estado$nao)
 # gerando camadas saldo, sim e não de mapa por partido
 index <- length(levels(factor(camada_partido@data$legislator_party)))
 partidos_nao <- list()
