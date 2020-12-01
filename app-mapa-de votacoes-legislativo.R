@@ -15,7 +15,7 @@ cham_19 <- read_csv("datasets/cham_19.csv")[, -1]
 cham_20 <- read_csv("datasets/cham_20.csv")[, -1]
 regiao_shp <- readOGR(dsn = "regioes_2010", layer = "regioes_2010")
 estados_shp <- readOGR(dsn = "estados_2010", layer = "estados_2010")
-
+unique(cham_19$rollcall_id)
 # Agrupar dados das votações  -------------------------------------------
 legislativo <- rbind(cham_19, cham_20)
 
