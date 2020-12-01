@@ -20,6 +20,7 @@ cham_2018 <- cham_votes_year('2018')
 cham_2019 <- cham_votes_year('2019')
 cham_2020 <- cham_votes_year('2020')
 
+
 str(cham_2015)
 str(cham_2016)
 str(cham_2017)
@@ -27,6 +28,10 @@ str(cham_2018)
 str(cham_2019)
 str(cham_2020)
 
+materias_2019 <- cham_bills(type = "PL", year = "2019")
+materias_2019$ementa_txt[2]
+materias_2019$bill_name[1]
+materias_2019$bill_id[1]
 # Variaveis de interesse
 # $rollcall_id
 # $decision_summary
