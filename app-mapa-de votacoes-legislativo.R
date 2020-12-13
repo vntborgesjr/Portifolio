@@ -1,8 +1,10 @@
-# --------------------------------------------------- 
-# Mapa de votação do legislativo entre 2019 e 2020 - versão App
-# 20 nov 2020 
-# VNTBJR 
-# --------------------------------------------------- 
+#
+# This is a Shiny web application. You can run the application by clicking
+# the 'Run App' button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    http://shiny.rstudio.com/
 #
 # Carregar pacotes  -------------------------------------------
 library(tidyverse)
@@ -13,9 +15,9 @@ library(shiny)
 # Carregar dados  -------------------------------------------
 cham_19 <- read_csv("datasets/cham_19.csv")[, -1]
 cham_20 <- read_csv("datasets/cham_20.csv")[, -1]
-regiao_shp <- readOGR(dsn = "regioes_2010", layer = "regioes_2010")
-estados_shp <- readOGR(dsn = "estados_2010", layer = "estados_2010")
-unique(cham_19$rollcall_id)
+regiao_shp <- readOGR(dsn = "datasets/regioes_2010", layer = "regioes_2010")
+estados_shp <- readOGR(dsn = "datasets/estados_2010", layer = "estados_2010")
+
 # Agrupar dados das votações  -------------------------------------------
 legislativo <- rbind(cham_19, cham_20)
 
@@ -72,12 +74,12 @@ estados_shp@data <- data.frame(estados_shp@data[, 3])
 names(estados_shp@data) <- "sigla"
 
 camadas_estados <- merge(x = estados_shp, y = estado_votos,
-                          by = "sigla", 
-                          duplicateGeoms = TRUE) # to merge a spatial object to a data frame
+                         by = "sigla", 
+                         duplicateGeoms = TRUE) # to merge a spatial object to a data frame
 
 camadas_partidos <- merge(x = estados_shp, y = partido_votos,
-                        by = "sigla", 
-                        duplicateGeoms = TRUE) # to merge a spatial object to a data frame
+                          by = "sigla", 
+                          duplicateGeoms = TRUE) # to merge a spatial object to a data frame
 
 camadas <- merge(x = camadas_partidos, y = resultado_materia,
                  by = "materia", 
@@ -126,21 +128,21 @@ iu <- fluidPage(
       selectInput("partido", "Selecione um partido: ",
                   choices = unique(camadas$partido))
     ),
-      # painel principal para o mapa
-      mainPanel(
-        tabsetPanel(
-          # Aba da descrição e resultado da votação
-          tabPanel("Resultado da votação", plotOutput("resultado")),
-          # Aba do mapa com resultado da votação por estado
-          tabPanel("Mapa: resultado por estado", tmap::tmapOutput("mapa_estado")),
-          # Aba da tabela dos resultados da votação por estado
-          tabPanel("Tabela: resutlado por estado", DT::DTOutput("tabela_estado")),
-          # Aba do mapa com resultado da votação por estado por partido
-          tabPanel("Mapa: resultado por estado por partido", tmap::tmapOutput("mapa_partido")),
-          # Aba da tabela dos resultados da votação por estado por partido
-          tabPanel("Tabela: resutlado por estado por partido", DT::DTOutput("tabela_partido"))
-        )
-        )))
+    # painel principal para o mapa
+    mainPanel(
+      tabsetPanel(
+        # Aba da descrição e resultado da votação
+        tabPanel("Resultado da votação", plotOutput("resultado")),
+        # Aba do mapa com resultado da votação por estado
+        tabPanel("Mapa: resultado por estado", tmap::tmapOutput("mapa_estado")),
+        # Aba da tabela dos resultados da votação por estado
+        tabPanel("Tabela: resutlado por estado", DT::DTOutput("tabela_estado")),
+        # Aba do mapa com resultado da votação por estado por partido
+        tabPanel("Mapa: resultado por estado por partido", tmap::tmapOutput("mapa_partido")),
+        # Aba da tabela dos resultados da votação por estado por partido
+        tabPanel("Tabela: resutlado por estado por partido", DT::DTOutput("tabela_partido"))
+      )
+    )))
 
 servidor <- function(input, output, session) {
   # Expressão reativa para obter os dados para o resutlado da
@@ -151,7 +153,7 @@ servidor <- function(input, output, session) {
   # Situação da votação de uma matéria
   output$resultado <- renderPlot({
     d <- resu_data() 
-      ggplot(d, aes(x = "", y = total, fill = Votos)) +
+    ggplot(d, aes(x = "", y = total, fill = Votos)) +
       geom_bar(colour = "black", stat = "identity", width = 1) +
       coord_polar("y", start = 0) +
       ggtitle(ifelse(d$total[d$Votos == "Sim"][1] > d$total[d$Votos == "Nao"][1],
@@ -169,7 +171,7 @@ servidor <- function(input, output, session) {
             plot.title = element_text(size = 12, 
                                       face = "bold", 
                                       hjust = 0.5))
-    })
+  })
   
   # Expressão para obter os dados para o mapa de votação por 
   # estado
