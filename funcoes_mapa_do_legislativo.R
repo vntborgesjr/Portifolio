@@ -83,9 +83,9 @@ unir_anos <- function(dados_ano1, ...) {
 
 ###################################################################### 
 # resultado_por_materia:  
-# Description: gera um data frame contendo o número de votos a favor (sim) e contra
-# (não) uma matéria
-# dados:  
+# Description: gera um data frame contendo o número de votos a favor
+# (sim) e contra (não) uma matéria
+# dados: recebe um data frame contendo o resultado da função unir_dados()
 ######################################################################
 resultado_por_materia <- function(dados) {
   resultado_materia <- dados %>% 
@@ -96,5 +96,89 @@ resultado_por_materia <- function(dados) {
     group_by(rollcall_id, legislator_vote) %>% 
     filter(legislator_vote %in% c("Sim", "Nao")) %>% 
     summarise(vote = sum(vote))
+}
+######################################################################
+
+###################################################################### 
+# grafico_resultado_por_materia:  
+# Description: gera um gráfico de pizza contendo o número de votos
+# a favor (sim) e contra uma matéria
+# dados: um data frame resultante da função resultado_por_matéria()
+# materia1: um inteiro impar que indica a linha da matéria
+# materia2: um inteiro par seguinte ao indicado em materia1
+######################################################################
+grafico_resultado_por_materia <- function(dados, materia1, materia2) {
+  resultado_materia %>% 
+    filter(rollcall_id == resultado_materia$rollcall_id[materia1]) %>% 
+    ggplot(aes(x = "", y = vote, fill = legislator_vote)) +
+    geom_bar(colour = "black", stat = "identity", width = 1) +
+    coord_polar("y", start = 0) +
+    ggtitle(ifelse(resultado_materia$vote[materia1] < resultado_materia$vote[materia2],
+                   paste("Situação da ", 
+                         resultado_materia$rollcall_id[materia1], "\nAprovada"), 
+                   paste("Situação da ", 
+                         resultado_materia$rollcall_id[materia1], "\nReprovada"))) +
+    theme_minimal() + 
+    theme(line = element_blank(),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          axis.text.x = element_blank(),
+          panel.border = element_blank(),
+          axis.ticks = element_blank(),
+          legend.title = element_blank(),
+          plot.title = element_text(size = 12, 
+                                    face = "bold", 
+                                    hjust = 0.5))
+}
+######################################################################
+
+###################################################################### 
+# resultado_por_estado:  
+# Description: gera um data frame contendo o número de votos a favor
+# (sim) e contra (não) uma matéria por estado
+# dados: recebe um data frame contendo o resultado da função unir_dados()
+######################################################################
+resultado_por_estado <- function(dados) {
+  estado_votos <- dados %>% 
+    group_by(rollcall_id, legislator_state, ano) %>% 
+    mutate(total = ifelse(legislator_vote == "Sim", 1, 
+                          ifelse(legislator_vote == "Nao", -1, 
+                                 ifelse(legislator_vote == "Art. 17", 0, 0))),
+           sim = ifelse(legislator_vote == "Sim", 1, 
+                        ifelse(legislator_vote == "Nao", 0, 
+                               ifelse(legislator_vote == "Art. 17", 0, 0))),
+           nao = ifelse(legislator_vote == "Sim", 0, 
+                        ifelse(legislator_vote == "Nao", -1, 
+                               ifelse(legislator_vote == "Art. 17", 0, 0)))) %>% 
+    group_by(materia = rollcall_id, sigla = legislator_state, ano) %>% 
+    filter(legislator_vote %in% c("Sim", "Nao")) %>% 
+    summarise(saldo = sum(total), sim = sum(sim), nao = sum(nao))
+  return(estado_votos)
+}
+######################################################################
+
+###################################################################### 
+# resultado_por_estado_partido:  
+# Description: gera um data frame contendo o número de votos a favor
+# (sim) e contra (não) uma matéria por estado e por partido   
+# dados: recebe um data frame contendo o resultado da função unir_dados()
+######################################################################
+resultado_por_estado_partido <- function(dados) {
+  resultado_materia_estado_partido <- dados %>% 
+    group_by(rollcall_id, legislator_state, legislator_party) %>% 
+    mutate(saldo = ifelse(legislator_vote == "Sim", 1, 
+                          ifelse(legislator_vote == "Nao", -1, 
+                                 ifelse(legislator_vote == "Art. 17", 0, 0))),
+           sim = ifelse(legislator_vote == "Sim", 1, 
+                        ifelse(legislator_vote == "Nao", 0, 
+                               ifelse(legislator_vote == "Art. 17", 0, 0))),
+           nao = ifelse(legislator_vote == "Sim", 0, 
+                        ifelse(legislator_vote == "Nao", -1, 
+                               ifelse(legislator_vote == "Art. 17", 0, 0)))) %>% 
+    group_by(rollcall_id, legislator_state, legislator_party, legislator_vote) %>% 
+    filter(legislator_vote %in% c("Sim", "Nao")) %>% 
+    summarise(saldo = sum(saldo), sim = sum(sim), nao = sum(nao))
+  head(resultado_materia_estado_partido)
+  return(resultado_materia_estado_partido)
 }
 ######################################################################
